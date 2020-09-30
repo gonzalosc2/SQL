@@ -312,7 +312,7 @@ IMPORTANT: Indentation is key!!
 
      */
 
--- EXAMPLE: need to know the regon each customer is from who has had an order
+-- EXAMPLE: need to know the region each customer is from who has had an order
 --          with freight over 100
 SELECT CustomerID
   ,CompanyName
@@ -326,7 +326,6 @@ WHERE customerID IN (
 -- www.poorsql.com: helps to read un-indented SQL code.
 
 -- EXAMPLE 2: need the total number of orders placed by every customer
-
 SELECT customer_name
   ,customer_state
   (
@@ -367,9 +366,301 @@ FROM Suppliers CROSS JOIN Products;
 -- INNER JOIN
 -- Selects record that have matching values (keys) in both tables
 -- If a variable is in both tables, I have to pre-qualify it to tell SQL from
--- where it should be pulled from.
+-- where it should be pulled from. No limit on number of joins (taxing as well)
 SELECT Suppliers.CompanyName
   ,product_name
   ,unit_price
 FROM Suppliers INNER JOIN Products
   ON Suppliers.supplierid = Products.supplierid
+
+-- Extracting data from 3 different tables
+SELECT o.OrderID
+  ,c.CompanyName
+  ,e.LastName
+-- Dataset follow by a word/letter, redefines its name only within the query
+FROM (
+  (Orders o INNER JOIN Customers c
+  ON o.CustomerID = c.CustomerID) INNER JOIN Employees e
+    ON o.EmployeeID = e.EmployeeID
+  )
+
+-- ALIASES: AS, helpful for SELF JOINS
+-- Only lasts during the query. Does not change the actual name of the column
+SELECT vendor_name
+  ,product_name
+  ,product_price
+FROM Vendors AS v
+  ,Products AS p
+WHERE v.vendor_id = p.vendor_id;
+
+-- SELF JOINS
+-- Takes the table and treat it like two separate tables, then joins the
+-- original table to itself
+
+-- EXAMPLE: matching customers that are from the same city
+SELECT A.CustomerName AS CustomerName1
+  ,B.CustomerName AS CustomerName2
+  ,A.City
+FROM Customers A, Customers B
+WHERE A.CustomerID = B.CustomerID AND A.City = B.City
+ORDER BY A.City;
+
+---------------------------------------
+-- ADVANCE JOINS: LEFT (SQLite only has this one), RIGHT, FULL OUTER JOIN
+
+-- LEFT JOIN (RIGHT JOIN is the exact opposite command)
+/*
+
+Returns all redocrs from the left table, and the matched records from the
+right table. The result is NULL from the right side if there is no match.
+
+Example: Customer (left) and Orders (right). If I use INNER JOIN, I will get
+         only those customers who have made an order, but not those who have
+         not. In case I use LEFT JOIN, I will get both.
+
+Switching the order of the query allows me to change from LEFT to RIGHT JOIN
+
+    */
+
+-- LEFT JOIN
+SELECT C.CustomerName
+  ,O.OrderID
+FROM Customers C LEFT JOIN Orders O
+  ON C.CustomerID = O.CustomerID
+ORDER BY C.CustomerID;
+
+-- FULL OUTER JOIN
+-- Returns all record when there is a match in either left or right table records.
+-- Returs everything.
+SELECT C.CustomerName
+  ,O.OrderID
+FROM Customers C FULL OUTER JOIN Orders O
+  ON C.CustomerID = O.CustomerID
+ORDER BY C.CustomerID;
+
+---------------------------------------
+-- UNION
+-- Used to combine the result-set of two or more SELECT statements.
+-- Note: each SELECT statement within UNION MUST have the same number of
+--       columns, as well as MUST have similar data types and the same order.
+
+-- EXAMPLE: which German cities have suppliers
+SELECT City, Country
+FROM Customers
+WHERE Country = 'Germany'
+UNION
+SELECT City, Country
+FROM Suppliers
+WHERE Country = 'Germany'
+ORDER BY City;
+
+---------------------------------------
+/* GOOD PRACTICES
+
+-> Check the number of records each time we make a new join.
+-> Check for duplicates.
+-> One table at a time.
+-> Map how we are joining data tables.
+-> Don't grab unnecessary data
+
+      */
+
+---------------------------------------
+-- METHODS FOR MODIFYING DATA
+
+-- TEXT STRINGS
+--  FUNCTIONS: CONCATENATE, SUBSTRING, TRIM, UPPER, LOWER
+
+-- CONCATENATE
+SELECT CompanyName
+  ,ContactName
+-- || can be replaced by + in SQL server
+  ,CompanyName || ' (' || ContactName ')'
+FROM Customers;
+
+-- TRIM, RTRIM, LTRIM: Additional space gets removed.
+SELECT TRIM('     You the best.     ') AS TrimmedString;
+
+-- SUBSTRING: returns the specified number of characters from a particular
+-- position of a given string
+-- SUBSTR(string_name, string_position, number of characters to be returned)
+SELECT first_name
+  ,SUBSTR(first_name,2,3)
+FROM Employees
+WHERE department_id = 60;
+
+-- UPPER, LOWER, UCASE (to set case type)
+SELECT UPPER(column_name) FROM table_name;
+
+SELECT LOWER(column_name) FROM table_name;
+
+SELECT UCASE(column_name) FROM table_name;
+
+-- DATES AND TIME STRING (for SQLite)
+/*
+
+  Date formats:
+    DATE        YYYY-MM-DD
+    DATETIME    YYYY-MM-DD HH:MI:SS
+    TIMESTAMP   YYYY-MM-DD HH:MI:SS
+
+  If we query a DATETIME with
+
+  WHERE PurchaseDate = '2016-12-12'
+
+  I want get any result
+
+  Timestrings:
+    YYYY-MM-DD
+    YYYY-MM-DD HH:MM
+    YYYY-MM-DD HH:MM:SS
+    YYYY-MM-DD HH:MM:SS.SSS
+    YYYY-MM-DDTHH:MM
+    YYYY-MM-DDTHH:MM:SS
+    YYYY-MM-DDTHH:MM:SS:SSS
+    HH:MM
+    HH:MM:SS
+    HH:MM:SS.SSS
+
+  Modifiers (are optional, the order is IMPORTANT):
+    NNN days
+    NNN hours
+    NNN minutes
+    NNN.NNNN seconds
+    NNN months
+    NNN years
+    start of month
+    start of year
+    start of day
+    weekday N
+    unixepoch
+    localtime
+    utc
+    now
+  */
+
+DATE(timestring, modifier, modifier, ...)
+TIME(timestring, modifier, modifier, ...)
+DATETIME(timestring, modifier, modifier, ...)
+JULIANDAY(timestring, modifier, modifier, ...)
+STRFTIME(format, timestring, modifier, modifier, ...)  -- Timestring data format
+
+SELECT Birthdate
+  ,STRFTIME('%Y', Birthdate) AS Year
+  ,STRFTIME('%m', Birthdate) AS Month
+  ,STRFTIME('%d', Birthdate) AS Day
+  ,DATE(('now') - Birthdate) AS Age
+FROM employees
+
+-- Compute Current Date
+SELECT DATE('now')
+SELECT DATE('%Y %m %d','now')
+SELECT DATE('%Y %m %d %S %s','now')
+
+---------------------------------------
+-- CASE STATEMENTS: mimics if-then-else statement
+-- Can be used in SELECT, INSERT, UPDATE and DELETE statements
+CASE
+WHEN C1 THEN E1
+WHEN C2 THEN E2
+...
+ELSE [result_else]
+END
+
+-- or
+CASE input_expression
+  WHEN when_expression THEN result_expression [...n]
+  [ ELSE else_result_expression]
+END
+
+-- EXAMPLE
+SELECT EmployeeId
+  ,FirstName
+  ,LastName
+  ,City
+  ,CASE City
+    WHEN 'Calgary' THEN 'Calgary'
+
+  ELSE 'Other'
+      END calgary  -- Should not have an AS in between?
+FROM Employees
+ORDER BY LastName, FirstName;
+
+-- EXAMPLE 2
+SELECT TrackId
+  ,Name
+  ,Bytes
+  ,CASE
+      WHEN bytes < 300000 THEN 'small'
+      WHEN bytes >= 300001 AND bytes <= 500000 THEN 'medium'
+      WHEN bytes > 500000 THEN 'large'
+      ELSE 'Other'
+    END bytescategory
+FROM tracks;
+
+---------------------------------------
+-- VIEWS
+-- Can add or remove columns without changing schema
+-- Use it to encapsulate queries
+-- The VIEW ends once database connection has ended
+CREATE [TEMP] VIEW [IF NOT EXISTS]   -- [optional commands]
+view_name(column-name-list)
+AS
+select-statement;
+
+-- EXAMPLE: Count of how many territories each employee has.
+-- Creating the view
+CREATE VIEW my_view
+AS
+SELECT r.regiondescription
+  ,t.territorydescription
+  ,e.LastName
+  ,e.FirstName
+  ,e.HireDate
+  ,e.ReportsTo
+FROM Region r
+INNER JOIN Territories t ON r.RegionId = t.RegionId
+INNER JOIN EmployeeTerritories et ON t.TerrytoryId = et.TerrytoryId
+INNER JOIN Empleoyees e ON et.EmployeeId = e.EmployeeId;
+
+-- Visualizing the view
+SELECT *
+FROM my_view;
+
+-- Deleting the view
+DROP VIEW my_view;
+
+-- Using it to encapsulate complex queries
+SELECT count(territorydescription)
+  ,LastName
+  ,FirstName
+FROM my_view
+GROUP BY LastName, FirstName;
+
+---------------------------------------
+-- DATA GOVERNANCE AND PROFILING
+
+/*
+
+  Data profiling: looking at descriptive statistics or object data information.
+                  Examinining it for completeness and accurary.
+                  Important to understand my data before we start working with
+                  it.
+
+        Object Data Profile
+        -> number of rows
+        -> table size
+        -> when it was last updated
+
+        Column Data Profile
+        -> data type
+        -> number of distinct values
+        -> number of rows with NULL values
+        -> descriptive statistics
+
+  Data Governance:
+      -> clean up the environment
+      -> understand our read and write capabilities
+      -> understand our promotion process      
+
+    */
