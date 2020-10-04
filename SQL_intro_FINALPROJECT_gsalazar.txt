@@ -377,48 +377,164 @@ city or category by their overall star rating. Compare the businesses with
 2-3 stars to the businesses with 4-5 stars and answer the following questions.
 Include your code.
 
-SELECT *
-FROM business b INNER JOIN category c
-	ON b.id = c.business_id
-WHERE city = "Toronto" AND category = "Restaurants"
-ORDER BY stars DESC
+I chose to analize Las Vegas' city as well as the Food's category.
 
 i. Do the two groups you chose to analyze have a different distribution of hours?
 
+Yes, in this case this case one of the businesses (4 stars) is open for fewer
+hours than its competitor (2.5 stars) on Saturday. If we remove the aggregation
+by stars, we will see that this pattern is maintained throughout the week.
+
++-----------------------------+-------+--------------+----------------------+
+| name                        | stars | review_count | hours                |
++-----------------------------+-------+--------------+----------------------+
+| Sweet Ruby Jane Confections |   4.0 |           30 | Saturday|10:00-19:00 |
+| Walgreens                   |   2.5 |            6 | Saturday|8:00-22:00  |
++-----------------------------+-------+--------------+----------------------+
 
 ii. Do the two groups you chose to analyze have a different number of reviews?
 
+Yes, the group with 4 stars has more reviews than the group with 2.5 stars.
+
++-----------------------------+-------+--------------+----------------------+
+| name                        | stars | review_count | hours                |
++-----------------------------+-------+--------------+----------------------+
+| Sweet Ruby Jane Confections |   4.0 |           30 | Saturday|10:00-19:00 |
+| Walgreens                   |   2.5 |            6 | Saturday|8:00-22:00  |
++-----------------------------+-------+--------------+----------------------+
 
 iii. Are you able to infer anything from the location data provided between these two groups? Explain.
 
+No, since both are at least 10-12 blocks away. Also notice that their postal
+codes are different, telling us that things that may influence one are might
+not cause any change in the other.
+
++-----------------------------+-------+--------------+-----------------------------+-------------+
+| name                        | stars | review_count | address                     | postal_code |
++-----------------------------+-------+--------------+-----------------------------+-------------+
+| Sweet Ruby Jane Confections |   4.0 |           30 | 8975 S Eastern Ave, Ste 3-B | 89123       |
+| Walgreens                   |   2.5 |            6 | 3808 E Tropicana Ave        | 89121       |
++-----------------------------+-------+--------------+-----------------------------+-------------+
+
 SQL code used for analysis:
 
+	--for part i and ii
+	SELECT b.name,
+	  b.stars,
+	  b.review_count,
+	  h.hours
+	FROM (
+	  ( business b INNER JOIN category c
+		  ON b.id = c.business_id) INNER JOIN hours h
+		    ON b.id = h.business_id)
+	WHERE city = "Las Vegas" AND category = "Food"
+	  AND stars >= 2
+	GROUP BY b.stars
+	ORDER BY b.stars DESC
+
+	--for part iii
+		SELECT b.name,
+	  b.stars,
+	  b.review_count,
+	  b.address,
+	  b.postal_code
+	FROM (
+	  ( business b INNER JOIN category c
+		  ON b.id = c.business_id) INNER JOIN hours h
+		    ON b.id = h.business_id)
+	WHERE city = "Las Vegas" AND category = "Food"
+	  AND stars >= 2
+	GROUP BY b.stars
+	ORDER BY b.stars DESC
 
 ---------------------------------------
-2. Group business based on the ones that are open and the ones that are closed. What differences can you find between the ones that are still open and the ones that are closed? List at least two differences and the SQL code you used to arrive at your answer.
+2. Group business based on the ones that are open and the ones that are closed.
+What differences can you find between the ones that are still open and the ones
+that are closed? List at least two differences and the SQL code you used to
+arrive at your answer.
+
++---------+---------------+---------------+--------------------+
+| is_open |      av_stars |   avg_reviews | is_funny_or_useful |
++---------+---------------+---------------+--------------------+
+|       0 |           2.0 |           4.0 |                  2 |
+|       1 | 2.96153846154 | 38.7692307692 |                 26 |
++---------+---------------+---------------+--------------------+
 
 i. Difference 1:
 
+Open businesses possess a higher star rating when compared to closed businesses.
+The same happens with average reviews.
 
 ii. Difference 2:
 
-
+There are less closed businesses listed as "funny" or "useful" compared to open
+businesses.
 
 SQL code used for analysis:
 
+	SELECT is_open,
+	  AVG(b.stars) AS av_stars,
+	  AVG(b.review_count) AS avg_reviews,
+	  COUNT(r.useful)+COUNT(r.funny) AS is_funny_or_useful
+	FROM business b INNER JOIN review r
+	  ON b.id = r.id
+	GROUP BY b.is_open
 
 ---------------------------------------
-3. For this last part of your analysis, you are going to choose the type of analysis you want to conduct on the Yelp dataset and are going to prepare the data for analysis.
+3. For this last part of your analysis, you are going to choose the type of
+analysis you want to conduct on the Yelp dataset and are going to prepare the
+data for analysis.
 
-Ideas for analysis include: Parsing out keywords and business attributes for sentiment analysis, clustering businesses to find commonalities or anomalies between them, predicting the overall star rating for a business, predicting the number of fans a user will have, and so on. These are just a few examples to get you started, so feel free to be creative and come up with your own problem you want to solve. Provide answers, in-line, to all of the following:
+Ideas for analysis include: Parsing out keywords and business attributes
+for sentiment analysis, clustering businesses to find commonalities or
+anomalies between them, predicting the overall star rating for a business,
+predicting the number of fans a user will have, and so on. These are just a
+few examples to get you started, so feel free to be creative and come up with
+your own problem you want to solve. Provide answers, in-line, to all of the
+following:
 
 i. Indicate the type of analysis you chose to do:
 
+	Analysis by food preferences among different cuisines.
 
 ii. Write 1-2 brief paragraphs on the type of data you will need for your analysis and why you chose that data:
 
+	I will choose different cuisines, including Chinese, Korean, French, Mexican,
+	Italian, Japanese, Indian, to quantify their star ratings and
+	total number of reviews. This will allow me to "predict" which cuisine is
+	more popular on Yelp.
 
 iii. Output of your finished dataset:
 
+	+----------+------------+---------------+---------------+-----------+
+	| category | resturants |     avg_start |   avg_reviews | city      |
+	+----------+------------+---------------+---------------+-----------+
+	| Chinese  |         13 | 3.76923076923 | 423.230769231 | Las Vegas |
+	| French   |         12 |           4.0 | 135.083333333 | Las Vegas |
+	| Italian  |         13 | 3.53846153846 | 78.2307692308 | Montréal  |
+	| Mexican  |         28 |         3.625 |          73.0 | Edinburgh |
+	| Indian   |          6 |           3.5 |          32.0 | Aurora    |
+	| Japanese |         20 |         3.475 |         22.85 | Toronto   |
+	| Korean   |          7 |           4.5 |           8.0 | Toronto   |
+	+----------+------------+---------------+---------------+-----------+
 
 iv. Provide the SQL code you used to create your final dataset:
+
+	SELECT c.category,
+		COUNT(b.name) AS resturants,
+		AVG(stars) AS avg_start,
+		AVG(b.review_count) AS avg_reviews,
+		b.city
+	FROM ((
+		business b INNER JOIN hours h
+			ON b.id = h.business_id) INNER JOIN category c
+				ON c.business_id = b.id)
+	WHERE c.category IN ("Chinese",
+		"Korean",
+		"French",
+		"Mexican",
+		"Italian",
+		"Japanese",
+		"Indian")
+	GROUP BY c.category
+	ORDER BY AVG(b.review_count) DESC
